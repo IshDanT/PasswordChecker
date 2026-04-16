@@ -1,1 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Random Passcode Tracker</title>
+    <style>
+        body { background: #111; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Courier New', monospace; margin: 0; }
+        #code { font-size: 120px; font-weight: bold; text-shadow: 0 0 20px #0f0; }
+        #stats { margin-top: 20px; color: #888; }
+        .hint { margin-top: 10px; font-size: 14px; color: #555; }
+    </style>
+</head>
+<body>
 
+    <div id="code">READY</div>
+    <div id="stats">Press ENTER to start</div>
+    <div class="hint">Numbers are randomized and will not repeat.</div>
+
+    <script>
+        // 1. Generate all numbers from 0000 to 9999
+        let pool = Array.from({length: 10000}, (_, i) => i.toString().padStart(4, '0'));
+        
+        // 2. Shuffle function (Fisher-Yates)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        
+        shuffle(pool);
+
+        let currentIndex = 0;
+        const codeDisplay = document.getElementById('code');
+        const statsDisplay = document.getElementById('stats');
+
+        // 3. Listen for Enter key
+        window.addEventListener('keydown', (e) => {
+            if (e.key === "Enter") {
+                if (currentIndex < pool.length) {
+                    codeDisplay.innerText = pool[currentIndex];
+                    currentIndex++;
+                    statsDisplay.innerText = `Attempt: ${currentIndex} / 10,000`;
+                } else {
+                    codeDisplay.innerText = "DONE";
+                    statsDisplay.innerText = "All combinations tested.";
+                }
+            }
+        });
+    </script>
+</body>
+</html>
