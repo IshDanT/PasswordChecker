@@ -2,51 +2,93 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Random Passcode Tracker</title>
+    <title>Saved Passcode Tracker</title>
     <style>
-        body { background: #111; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Courier New', monospace; margin: 0; }
+        body { background: #111; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Courier New', monospace; margin: 0; text-align: center; }
         #code { font-size: 120px; font-weight: bold; text-shadow: 0 0 20px #0f0; }
-        #stats { margin-top: 20px; color: #888; }
-        .hint { margin-top: 10px; font-size: 14px; color: #555; }
+        #stats { margin-top: 20px; color: #888; font-size: 20px; }
+        .controls { margin-top: 30px; }
+        button { padding: 10px 20px; cursor: pointer; background: #333; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #444; }
     </style>
 </head>
 <body>
 
-    <div id="code">READY</div>
-    <div id="stats">Press ENTER to start</div>
-    <div class="hint">Numbers are randomized and will not repeat.</div>
+    <div id="code">LOADING...</div>
+    <div id="stats">Checking saved progress...</div>
+    
+    <div class="controls">
+        <p style="color: #555;">Press <b>ENTER</b> to advance</p>
+        <button onclick="resetEverything()">Reset All Progress</button>
+    </div>
 
     <script>
-        // 1. Generate all numbers from 0000 to 9999
-        let pool = Array.from({length: 10000}, (_, i) => i.toString().padStart(4, '0'));
-        
-        // 2. Shuffle function (Fisher-Yates)
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+        let pool = [];
+        let currentIndex = 0;
+
+        // 1. Check if we already have a saved list and index
+        function loadData() {
+            const savedPool = localStorage.getItem('passcode_pool');
+            const savedIndex = localStorage.getItem('passcode_index');
+
+            if (savedPool) {
+                pool = JSON.parse(savedPool);
+                currentIndex = parseInt(savedIndex) || 0;
+                displayCurrent();
+            } else {
+                generateNewPool();
             }
         }
-        
-        shuffle(pool);
 
-        let currentIndex = 0;
-        const codeDisplay = document.getElementById('code');
-        const statsDisplay = document.getElementById('stats');
+        // 2. Generate and Shuffle
+        function generateNewPool() {
+            pool = Array.from({length: 10000}, (_, i) => i.toString().padStart(4, '0'));
+            // Fisher-Yates Shuffle
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            currentIndex = 0;
+            saveData();
+            displayCurrent();
+        }
 
-        // 3. Listen for Enter key
+        // 3. Save to browser memory
+        function saveData() {
+            localStorage.setItem('passcode_pool', JSON.stringify(pool));
+            localStorage.setItem('passcode_index', currentIndex.toString());
+        }
+
+        function displayCurrent() {
+            if (currentIndex < pool.length) {
+                document.getElementById('code').innerText = pool[currentIndex];
+                document.getElementById('stats').innerText = `Attempt: ${currentIndex + 1} / 10,000`;
+            } else {
+                document.getElementById('code').innerText = "DONE";
+                document.getElementById('stats').innerText = "All codes tested.";
+            }
+        }
+
+        function resetEverything() {
+            if (confirm("Are you sure? This will scramble the order and start back at 0.")) {
+                localStorage.clear();
+                generateNewPool();
+            }
+        }
+
+        // 4. Keyboard Listener
         window.addEventListener('keydown', (e) => {
             if (e.key === "Enter") {
-                if (currentIndex < pool.length) {
-                    codeDisplay.innerText = pool[currentIndex];
+                if (currentIndex < pool.length - 1) {
                     currentIndex++;
-                    statsDisplay.innerText = `Attempt: ${currentIndex} / 10,000`;
-                } else {
-                    codeDisplay.innerText = "DONE";
-                    statsDisplay.innerText = "All combinations tested.";
+                    saveData();
+                    displayCurrent();
                 }
             }
         });
+
+        // Initialize on load
+        loadData();
     </script>
 </body>
 </html>
