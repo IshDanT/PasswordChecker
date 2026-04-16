@@ -2,33 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Smart Random Tracker</title>
+    <title>Fixed Passcode Tracker</title>
     <style>
-        body { background: #000; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: monospace; margin: 0; text-align: center; }
-        #code { font-size: 150px; font-weight: bold; text-shadow: 0 0 20px #0f0; }
-        #stats { color: #050; font-size: 22px; margin-top: 10px; }
-        .hint { color: #333; margin-top: 30px; font-size: 14px; }
-        button { background: #111; color: #333; border: 1px solid #222; padding: 5px 10px; cursor: pointer; margin-top: 20px; }
+        body { background: #000; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: monospace; margin: 0; text-align: center; cursor: pointer; }
+        #code { font-size: 150px; font-weight: bold; text-shadow: 0 0 20px #0f0; pointer-events: none; }
+        #stats { color: #050; font-size: 22px; margin-top: 10px; pointer-events: none; }
+        .hint { color: #222; margin-top: 30px; font-size: 14px; pointer-events: none; }
+        button { background: #111; color: #444; border: 1px solid #222; padding: 10px; cursor: pointer; margin-top: 40px; position: relative; z-index: 10; }
     </style>
 </head>
-<body>
+<body onclick="getNextRandom()">
 
     <div id="code">----</div>
-    <div id="stats">Press SPACE to Start</div>
+    <div id="stats">Tap Screen or Press SPACE</div>
     <div class="hint">Numbers are random and will not repeat.</div>
-    <button onclick="hardReset()">Hard Reset</button>
+    
+    <button onclick="event.stopPropagation(); hardReset();">Hard Reset</button>
 
     <script>
-        // Track which numbers have been used using a Set for speed
         let usedCodes = new Set(JSON.parse(localStorage.getItem('used_codes')) || []);
         let currentCode = localStorage.getItem('current_display_code') || "----";
 
-        const display = document.getElementById('code');
-        const stats = document.getElementById('stats');
-
         function updateUI() {
-            display.innerText = currentCode;
-            stats.innerText = `Attempt: ${usedCodes.size} / 10,000`;
+            document.getElementById('code').innerText = currentCode;
+            document.getElementById('stats').innerText = `Attempt: ${usedCodes.size} / 10,000`;
         }
 
         function getNextRandom() {
@@ -38,24 +35,16 @@
                 return;
             }
 
-            let found = false;
             let next;
-            
-            // Keep picking until we find a number we haven't used
-            while (!found) {
+            do {
                 next = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-                if (!usedCodes.has(next)) {
-                    found = true;
-                }
-            }
+            } while (usedCodes.has(next));
 
             currentCode = next;
             usedCodes.add(next);
             
-            // Save progress
             localStorage.setItem('used_codes', JSON.stringify(Array.from(usedCodes)));
             localStorage.setItem('current_display_code', currentCode);
-            
             updateUI();
         }
 
@@ -68,9 +57,16 @@
             }
         }
 
-        document.body.onkeyup = function(e) {
-    if (e.code === "Space" || e.keyCode === 32) {
-        e.preventDefault();
-        getNextRandom();
-    }
-}
+        // Spacebar listener
+        window.addEventListener('keydown', (e) => {
+            if (e.code === "Space") {
+                e.preventDefault();
+                getNextRandom();
+            }
+        });
+
+        // Load saved state immediately
+        updateUI();
+    </script>
+</body>
+</html>
