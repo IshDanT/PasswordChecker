@@ -2,82 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Saved Passcode Tracker</title>
+    <title>Safe Passcode Tracker</title>
     <style>
-        body { background: #111; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Courier New', monospace; margin: 0; text-align: center; }
-        #code { font-size: 150px; font-weight: bold; text-shadow: 0 0 25px #0f0; margin: 0; }
-        #stats { margin-top: 10px; color: #888; font-size: 24px; }
-        .controls { margin-top: 40px; }
-        .instruction { color: #555; font-size: 18px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
-        button { padding: 10px 20px; cursor: pointer; background: #222; color: #666; border: 1px solid #444; border-radius: 5px; font-family: inherit; }
-        button:hover { background: #333; color: #fff; }
+        body { background: #000; color: #00ff00; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Courier New', monospace; margin: 0; text-align: center; overflow: hidden; }
+        #code { font-size: 160px; font-weight: bold; text-shadow: 0 0 20px #00ff00; margin: 0; }
+        #stats { margin-top: 15px; color: #008800; font-size: 24px; }
+        .controls { margin-top: 50px; }
+        .instruction { color: #444; font-size: 18px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 3px; }
+        button { padding: 10px 25px; cursor: pointer; background: #111; color: #444; border: 1px solid #222; border-radius: 4px; font-family: inherit; font-size: 12px; }
+        button:hover { background: #222; color: #00ff00; border-color: #00ff00; }
     </style>
 </head>
 <body>
 
-    <div id="code">LOADING...</div>
-    <div id="stats">Checking saved progress...</div>
+    <div id="code">0000</div>
+    <div id="stats">Initializing...</div>
     
     <div class="controls">
-        <div class="instruction">Press <b>SPACEBAR</b> to advance</div>
-        <button onclick="resetEverything()">Reset All Progress</button>
+        <div class="instruction">Tap <b>SPACEBAR</b> to advance</div>
+        <button onclick="resetEverything()">Hard Reset (New Random Order)</button>
     </div>
 
     <script>
         let pool = [];
         let currentIndex = 0;
 
-        function loadData() {
-            const savedPool = localStorage.getItem('passcode_pool');
-            const savedIndex = localStorage.getItem('passcode_index');
-
-            if (savedPool) {
-                pool = JSON.parse(savedPool);
-                currentIndex = parseInt(savedIndex) || 0;
-                displayCurrent();
-            } else {
-                generateNewPool();
+        function saveData() {
+            try {
+                localStorage.setItem('passcode_pool', JSON.stringify(pool));
+                localStorage.setItem('passcode_index', currentIndex.toString());
+            } catch (e) {
+                console.error("Save failed", e);
             }
         }
 
         function generateNewPool() {
+            // Create 0000-9999
             pool = Array.from({length: 10000}, (_, i) => i.toString().padStart(4, '0'));
+            // Shuffle
             for (let i = pool.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [pool[i], pool[j]] = [pool[j], pool[i]];
             }
             currentIndex = 0;
             saveData();
-            displayCurrent();
+            updateDisplay();
         }
 
-        function saveData() {
-            localStorage.setItem('passcode_pool', JSON.stringify(pool));
-            localStorage.setItem('passcode_index', currentIndex.toString());
-        }
+        function loadData() {
+            const savedPool = localStorage.getItem('passcode_pool');
+            const savedIndex = localStorage.getItem('passcode_index');
 
-        function displayCurrent() {
-            if (currentIndex < pool.length) {
-                document.getElementById('code').innerText = pool[currentIndex];
-                document.getElementById('stats').innerText = `Attempt: ${currentIndex + 1} / 10,000`;
+            if (savedPool && savedIndex) {
+                try {
+                    pool = JSON.parse(savedPool);
+                    currentIndex = parseInt(savedIndex);
+                    // If data is broken, fix it
+                    if (!Array.isArray(pool) || isNaN(currentIndex)) throw "Data Error";
+                    updateDisplay();
+                } catch (e) {
+                    generateNewPool();
+                }
             } else {
-                document.getElementById('code').innerText = "DONE";
-                document.getElementById('stats').innerText = "All codes tested.";
-            }
-        }
-
-        function resetEverything() {
-            if (confirm("Reset everything? This will generate a NEW random order.")) {
-                localStorage.clear();
                 generateNewPool();
             }
         }
 
-        // UPDATED: Now listens specifically for the Spacebar
-        window.addEventListener('keydown', (e) => {
-            // Using e.code === "Space" to prevent scrolling down the page
-            if (e.code === "Space") {
-                e.preventDefault(); // This stops the window from jumping/scrolling
-                if (currentIndex < pool.length - 1) {
-                    currentIndex++;
-                    saveData
+        function updateDisplay() {
+            const codeEl = document.getElementById('code');
+            const statsEl = document.getElementById('stats');
+            
+            if (currentIndex < pool.length) {
+                codeEl.innerText = pool[currentIndex];
+                statsEl.innerText = `Attempt: ${currentIndex + 1} / 10,000`;
+            } else {
+                codeEl.innerText = "DONE";
+                statsEl.innerText = "All combinations exhausted.";
+            }
+        }
+
+        function resetEverything() {
+            if (confirm("This will clear your current progress
