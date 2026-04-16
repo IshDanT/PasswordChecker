@@ -2,84 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Safe Passcode Tracker</title>
+    <title>Smart Random Tracker</title>
     <style>
-        body { background: #000; color: #00ff00; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: 'Courier New', monospace; margin: 0; text-align: center; overflow: hidden; }
-        #code { font-size: 160px; font-weight: bold; text-shadow: 0 0 20px #00ff00; margin: 0; }
-        #stats { margin-top: 15px; color: #008800; font-size: 24px; }
-        .controls { margin-top: 50px; }
-        .instruction { color: #444; font-size: 18px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 3px; }
-        button { padding: 10px 25px; cursor: pointer; background: #111; color: #444; border: 1px solid #222; border-radius: 4px; font-family: inherit; font-size: 12px; }
-        button:hover { background: #222; color: #00ff00; border-color: #00ff00; }
+        body { background: #000; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: monospace; margin: 0; text-align: center; }
+        #code { font-size: 150px; font-weight: bold; text-shadow: 0 0 20px #0f0; }
+        #stats { color: #050; font-size: 22px; margin-top: 10px; }
+        .hint { color: #333; margin-top: 30px; font-size: 14px; }
+        button { background: #111; color: #333; border: 1px solid #222; padding: 5px 10px; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <div id="code">0000</div>
-    <div id="stats">Initializing...</div>
-    
-    <div class="controls">
-        <div class="instruction">Tap <b>SPACEBAR</b> to advance</div>
-        <button onclick="resetEverything()">Hard Reset (New Random Order)</button>
-    </div>
+    <div id="code">----</div>
+    <div id="stats">Press SPACE to Start</div>
+    <div class="hint">Numbers are random and will not repeat.</div>
+    <button onclick="hardReset()">Hard Reset</button>
 
     <script>
-        let pool = [];
-        let currentIndex = 0;
+        // Track which numbers have been used using a Set for speed
+        let usedCodes = new Set(JSON.parse(localStorage.getItem('used_codes')) || []);
+        let currentCode = localStorage.getItem('current_display_code') || "----";
 
-        function saveData() {
-            try {
-                localStorage.setItem('passcode_pool', JSON.stringify(pool));
-                localStorage.setItem('passcode_index', currentIndex.toString());
-            } catch (e) {
-                console.error("Save failed", e);
-            }
+        const display = document.getElementById('code');
+        const stats = document.getElementById('stats');
+
+        function updateUI() {
+            display.innerText = currentCode;
+            stats.innerText = `Attempt: ${usedCodes.size} / 10,000`;
         }
 
-        function generateNewPool() {
-            // Create 0000-9999
-            pool = Array.from({length: 10000}, (_, i) => i.toString().padStart(4, '0'));
-            // Shuffle
-            for (let i = pool.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [pool[i], pool[j]] = [pool[j], pool[i]];
+        function getNextRandom() {
+            if (usedCodes.size >= 10000) {
+                currentCode = "DONE";
+                updateUI();
+                return;
             }
-            currentIndex = 0;
-            saveData();
-            updateDisplay();
-        }
 
-        function loadData() {
-            const savedPool = localStorage.getItem('passcode_pool');
-            const savedIndex = localStorage.getItem('passcode_index');
-
-            if (savedPool && savedIndex) {
-                try {
-                    pool = JSON.parse(savedPool);
-                    currentIndex = parseInt(savedIndex);
-                    // If data is broken, fix it
-                    if (!Array.isArray(pool) || isNaN(currentIndex)) throw "Data Error";
-                    updateDisplay();
-                } catch (e) {
-                    generateNewPool();
-                }
-            } else {
-                generateNewPool();
-            }
-        }
-
-        function updateDisplay() {
-            const codeEl = document.getElementById('code');
-            const statsEl = document.getElementById('stats');
+            let found = false;
+            let next;
             
-            if (currentIndex < pool.length) {
-                codeEl.innerText = pool[currentIndex];
-                statsEl.innerText = `Attempt: ${currentIndex + 1} / 10,000`;
-            } else {
-                codeEl.innerText = "DONE";
-                statsEl.innerText = "All combinations exhausted.";
+            // Keep picking until we find a number we haven't used
+            while (!found) {
+                next = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                if (!usedCodes.has(next)) {
+                    found = true;
+                }
+            }
+
+            currentCode = next;
+            usedCodes.add(next);
+            
+            // Save progress
+            localStorage.setItem('used_codes', JSON.stringify(Array.from(usedCodes)));
+            localStorage.setItem('current_display_code', currentCode);
+            
+            updateUI();
+        }
+
+        function hardReset() {
+            if (confirm("Reset everything?")) {
+                localStorage.clear();
+                usedCodes = new Set();
+                currentCode = "----";
+                updateUI();
             }
         }
 
-        function resetEverything() {
-            if (confirm("This will clear your current progress
+        window.addEventListener('keydown', (e) => {
+            if (e.code === "Space") {
+                e.preventDefault
